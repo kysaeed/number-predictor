@@ -9,6 +9,13 @@ window._ = require('lodash');
 window.axios = require('axios');
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+let ajax = document.head.querySelector('meta[name="base-url"]');
+if (ajax) {
+    // ajaxBaseUrl = ajax.content;
+    window.axios.defaults.baseURL = ajax.content;
+}
+
+
 
 /**
  * Echo exposes an expressive API for subscribing to channels and listening
