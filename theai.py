@@ -8,9 +8,11 @@ from dataset.mnist import load_mnist
 # ***********************************
 #  "ゼロから作る Deep Learning" より
 #   https://github.com/oreilly-japan/deep-learning-from-scratch
-#
-#    まずは定義済みの学習データで数値を判定して見るために作成
-#    TODO: 学習データを更新して認識率を上げる
+
+
+# ***********************************
+#    学習データを更新(無ければ新規作成):
+#       create_nn_weight.pyを実行
 #
 
 
@@ -37,7 +39,7 @@ def aa(dots):
 
 # ---------------------------
 def get_network():
-    with open("sample_weight.pkl", 'rb') as f:
+    with open("number_predect_weight.pkl", 'rb') as f:
         network = pickle.load(f)
     return network
 
