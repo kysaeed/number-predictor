@@ -14,7 +14,7 @@ composer install
 ### Vueのビルド
 
 ```
-yarn dev
+npm run dev
 ```
 or
 ```
