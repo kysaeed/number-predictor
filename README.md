@@ -28,7 +28,7 @@ yarn dev
  ```
 
 ## 実行
-枠内に手書きの0-9の一文字の数値を書いて、「判定」でどの文字かを判定します。
+枠内に手書きの0-9の一文字の数値を書いて、判定ボタン「どの数字？」でどの文字かを判定します。
 
 <p align="center"><img src="https://raw.githubusercontent.com/kysaeed/number-predictor/main/np-screen.png" width="400"></p>
 
