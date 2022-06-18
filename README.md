@@ -6,9 +6,12 @@ Laravel+Vue.jsでUIを構築。
 
 ## install
 
+### Laravel
+
 ```
 composer install 
 ```
+### Vueのビルド
 
 ```
 yarn dev
@@ -17,6 +20,7 @@ or
 ```
 yarn dev
 ```
+### AI学習データ
 
 学習データ作成
 ```
