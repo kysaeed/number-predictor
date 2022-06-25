@@ -87,13 +87,6 @@ else:
     b3 = np.random.randn(10) * np.sqrt(1.0 / 100)
 
     
-    
-    # print(d['b1'].shape)
-
-# exit (1)
-
-
-
 # print(w1.shape, b1.shape)
 # print(w2.shape, b2.shape)
 # print(w3.shape, b3.shape)
@@ -192,13 +185,40 @@ seq.append(ReLU())
 
 last = SoftMaxWithLoass()
 
+affineList =  [a1, a2, a3,]
 affineListBackward = [a3, a2, a1,]
 
 
+# adaG
+# hl = []
+# for affine in affineList:
+#     hl.append({
+#         'a': affine,
+#         'hW': np.zeros_like(affine.w),
+#         'hb': np.zeros_like(affine.b),
+#     })
+    
+    
+# adam
+mvl = []
+iter = 0
+beta1 = 0.9
+beta2 = 0.999
+for affine in affineList:
+    mvl.append({
+        'a': affine,
+        'mW': np.zeros_like(affine.w),
+        'vW': np.zeros_like(affine.w),
+        'mb': np.zeros_like(affine.b),
+        'vb': np.zeros_like(affine.b),
+    })
+    
 
 
-
-for count in range(1, 100000):
+loopCount = 100000
+step = 500
+lossTotal = None
+for count in range(1, loopCount):
 
     index = np.random.choice(10000, 100) #[random.randint(0, 10000)]
     x = np.array(x_test[index])
@@ -211,6 +231,10 @@ for count in range(1, 100000):
         x = s.fw(x)
         
     loss = last.fw(x, train)
+    if lossTotal != None:
+        lossTotal = (lossTotal + np.average(loss)) * 0.5
+    else:
+        lossTotal = np.average(loss)
 
 
     result = x.argmax(axis = 1)
@@ -224,16 +248,46 @@ for count in range(1, 100000):
         dout = s.bk(dout)
         # print(dout)
 
-    rate = 0.1
-    for a in affineListBackward:
-        a.w -= (a.dW * rate)
-        a.b -= (a.db * rate)
+    # SDG
+    # rate = 0.1
+    # for a in affineListBackward:
+    #     a.w -= (a.dW * rate)
+    #     a.b -= (a.db * rate)
+        
+        
+    # # adaG
+    # rate = 0.01
+    # for h in hl:
+    #     a = h['a']
+        
+    #     h['hW'] += a.dW * a.dW
+    #     a.w -= rate * a.dW / (np.sqrt(h['hW']) + 1e-7)
+        
+    #     h['hb'] += a.db * a.db
+    #     a.b -= rate * a.db / (np.sqrt(h['hb']) + 1e-7)
+        
+    
+    # adam
+    rate = 0.01
+    iter += 1
+    rate_t = rate * np.sqrt(1.0 - beta2 ** iter) / (1.0 - beta1 ** iter)
+    for mv in mvl:
+        a = mv['a']
+        
+        mv['mW'] += (1 - beta1) * (a.dW - mv['mW'])
+        mv['vW'] += (1 - beta2) * (a.dW ** 2 - mv['vW'])
+        a.w -= rate_t * mv['mW'] / (np.sqrt(mv['vW'] + 1e-7))
+                
+        mv['mb'] += (1 - beta1) * (a.db - mv['mb'])
+        mv['vb'] += (1 - beta2) * (a.db ** 2 - mv['vb'])
+        a.b -= rate_t * mv['mb'] / (np.sqrt(mv['vb'] + 1e-7))
         
 
-    # TODO: 表示を間引いているだけなので、正しい平均値の表示になおす
-    if count % 1000 == 0:
-        print ('loss', np.average(loss))
-        print('正解率', np.sum(result == mtLabels) / mtLabels.shape[0] * 100.0)
+    if count % step == 0:
+        print('** 学習の進捗: {:.1f}% ***************************'.format((count / loopCount) * 100.0))
+        print(' - loss', lossTotal)
+        print(' - 正解率', np.sum(result == mtLabels) / mtLabels.shape[0] * 100.0)
+        print('')
 
 
 uNet = {
