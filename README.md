@@ -24,7 +24,7 @@ yarn dev
 
 学習データ作成
 ```
- python3 create_weight.py
+ python3 create_nn_weight.py
  ```
 
 ## 実行
