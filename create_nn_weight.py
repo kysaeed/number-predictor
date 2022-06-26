@@ -49,7 +49,7 @@ def set_network(network):
 
 (x_train, t_train), (x_test, t_test) = load_mnist(normalize=True, flatten=True, one_hot_label=False)
 
-
+# print(t_train.shape, t_test.shape)
 
 
 # for num in mx:
@@ -65,6 +65,7 @@ def set_network(network):
 d = get_network()
 
 
+
 if d != None:
     # print(d.keys())
 
@@ -78,19 +79,21 @@ if d != None:
     b3 = np.array(d['b3'])
     
 else:
-    w1 = np.random.randn(784, 50) * np.sqrt(1.0 / 784)
-    w2 = np.random.randn(50, 100) * np.sqrt(1.0 / 50)
-    w3 = np.random.randn(100, 10) * np.sqrt(1.0 / 100)
+    # w1 = np.random.randn(784, 50) * np.sqrt(2.0 / 784)
+    # w2 = np.random.randn(50, 100) * np.sqrt(2.0 / 50)
+    # w3 = np.random.randn(100, 10) * np.sqrt(2.0 / 100)
     
-    b1 = np.random.randn(50) * np.sqrt(1.0 / 784)
-    b2 = np.random.randn(100) * np.sqrt(1.0 / 50)
-    b3 = np.random.randn(10) * np.sqrt(1.0 / 100)
-
+    # b1 = np.random.randn(50) * np.sqrt(2.0 / 784)
+    # b2 = np.random.randn(100) * np.sqrt(2.0 / 50)
+    # b3 = np.random.randn(10) * np.sqrt(2.0 / 100)
     
-# print(w1.shape, b1.shape)
-# print(w2.shape, b2.shape)
-# print(w3.shape, b3.shape)
-# exit(0)
+    w1 = np.random.randn(784, 50)
+    w2 = np.random.randn(50, 100)
+    w3 = np.random.randn(100, 10)
+    
+    b1 = np.random.randn(50) 
+    b2 = np.random.randn(100)
+    b3 = np.random.randn(10)
 
 
 class Affine:
@@ -109,6 +112,52 @@ class Affine:
         self.dW = np.dot(self.x.T, dout)
         self.db = np.sum(dout, axis = 0)
         return np.dot(dout, self.w.T)
+    
+class Norm:
+    def __init__(self, gamma = 1.0, beta = 0):
+        self.gamma = gamma
+        self.beta = beta
+        
+        self.mu = None
+        self.xc = None
+        self.var = None
+        self.std = None
+        self.xn = None
+    
+        
+    def fw(self, x):
+        _x = x.reshape(x.shape[0], -1)
+        
+        mu = _x.mean(axis=0)
+        xc = _x - mu
+        var = np.mean(xc**2, axis=0)
+        std = np.sqrt(var + 10e-7)
+        xn = xc / std
+        
+        self.mu = mu
+        self.xc = xc
+        self.var = var
+        self.std = std
+        self.xn = xn
+        
+        out = self.gamma * xn + self.beta         
+        return out.reshape(*x.shape) # todo: gammna weight + b
+    
+    def bk(self, dout):
+        _dout = dout.reshape(dout.shape[0], -1)
+        
+        # dbeta = _dout.sum(axis=0)
+        # dgamma = np.sum(self.xn * _dout, axis=0)
+        
+        dxn = self.gamma * _dout
+        dxc = dxn / self.std
+        dstd = -np.sum((dxn * self.xc) / (self.std * self.std), axis=0)
+        dvar = 0.5 * dstd / self.std
+        dxc += (2.0 / dout.shape[0]) * self.xc * dvar
+        dmu = np.sum(dxc, axis=0)
+        dx = dxc - dmu / _dout.shape[0]
+        
+        return dx.reshape(*dout.shape)
 
 class ReLU:
     def __init__(self):
@@ -170,17 +219,22 @@ class SoftMaxWithLoass(SoftMax):
 
 seq = []
 
+gamma = 100.0
+beta = 1.0
 
 a1 = Affine(w1, b1)
 seq.append(a1)
+seq.append(Norm(gamma, beta))
 seq.append(ReLU())
 
 a2 = Affine(w2, b2)
 seq.append(a2)
+seq.append(Norm(gamma, beta))
 seq.append(ReLU())
 
 a3 =  Affine(w3, b3)
 seq.append(a3)
+seq.append(Norm(gamma, beta))
 seq.append(ReLU())
 
 last = SoftMaxWithLoass()
@@ -220,9 +274,9 @@ step = 500
 lossTotal = None
 for count in range(1, loopCount):
 
-    index = np.random.choice(10000, 100) #[random.randint(0, 10000)]
-    x = np.array(x_test[index])
-    mtLabels = np.array(t_test[index])
+    index = np.random.choice(x_train.shape[0], 100) #[random.randint(0, 10000)]
+    x = np.array(x_train[index])
+    mtLabels = np.array(t_train[index])
     train = np.identity(10)[mtLabels]
 
 
@@ -237,7 +291,6 @@ for count in range(1, loopCount):
         lossTotal = np.average(loss)
 
 
-    result = x.argmax(axis = 1)
 
     # backword **********
     bkSeq = list(seq)
@@ -284,9 +337,21 @@ for count in range(1, loopCount):
         
 
     if count % step == 0:
+        
+        
+        testIndex = np.random.choice(x_test.shape[0], 100) #[random.randint(0, 10000)]
+        x = np.array(x_test[testIndex])
+        testLabels = np.array(t_test[testIndex])
+        test = np.identity(10)[testLabels]
+        
+        for s in seq:
+            x = s.fw(x)
+        
+        
+        result = x.argmax(axis = 1)
         print('** 学習の進捗: {:.1f}% ***************************'.format((count / loopCount) * 100.0))
         print(' - loss', lossTotal)
-        print(' - 正解率', np.sum(result == mtLabels) / mtLabels.shape[0] * 100.0)
+        print(' - 正解率', (np.sum(result == testLabels) / testLabels.shape[0]) * 100.0)
         print('')
 
 
